@@ -1,6 +1,7 @@
 use iced::{canvas, executor, Application, Canvas, Color, Command, Container, Element, Length, Point,
            Settings, Size, Column, Text, Row, HorizontalAlignment, VerticalAlignment};
 use std::fmt::Error;
+
 mod data;
 
 pub fn main() {
@@ -12,6 +13,7 @@ pub fn main() {
 
 struct App {
     data: Hist,
+    loaded: bool,
     bars: canvas::layer::Cache<Hist>,
 }
 
@@ -31,6 +33,7 @@ impl Application for App {
                 labels_and_counts: vec! {
                     ("a".to_owned(), 10)}
             },
+            loaded: false,
             bars: Default::default(),
         },
          Command::perform(data::compute_histogram(), Message::Loaded),
@@ -45,7 +48,8 @@ impl Application for App {
         match message {
             Message::Loaded(Ok(data)) => {
                 *self = App {
-                    data: Hist{labels_and_counts: data},
+                    data: Hist { labels_and_counts: data },
+                    loaded: true,
                     bars: Default::default(),
                 };
                 Command::none()
@@ -55,48 +59,56 @@ impl Application for App {
     }
 
     fn view(&mut self) -> Element<Message> {
-        let canvas = Canvas::new()
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .push(self.bars.with(&self.data));
-
-        let labels: Element<_> = self.data.labels_and_counts
-            .iter()
-            .map(|(c, _)| {
-                Text::new(format!("{}", *c))
-                    .size(15)
-                    .width(Length::Fill)
-                    .horizontal_alignment(HorizontalAlignment::Center)
-                    .vertical_alignment(VerticalAlignment::Center)
-            })
-            .fold(Row::new()
-                      .width(Length::Fill),
-                  |row, label| row.push(label))
-            .into();
-        let counts: Element<_> = self.data.labels_and_counts
-            .iter()
-            .map(|(_, c)| {
-                Text::new(format!("{}", *c))
-                    .size(15)
-                    .width(Length::Fill)
-                    .horizontal_alignment(HorizontalAlignment::Center)
-                    .vertical_alignment(VerticalAlignment::Center)
-            })
-            .fold(Row::new()
-                      .width(Length::Fill),
-                  |row, label| row.push(label))
-            .into();
-
-        Column::new()
-            .padding(1)
-            .push(Container::new(canvas)
+        if !self.loaded {
+            Text::new("Loading...")
+                .size(55)
                 .width(Length::Fill)
                 .height(Length::Fill)
-                .padding(0)
-            )
-            .push(labels)
-            .push(counts)
-            .into()
+                .horizontal_alignment(HorizontalAlignment::Center)
+                .vertical_alignment(VerticalAlignment::Center)
+                .into()
+        } else {
+            let canvas = Canvas::new()
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .push(self.bars.with(&self.data));
+
+            let labels: Element<_> = self.data.labels_and_counts
+                .iter()
+                .map(|(c, _)| {
+                    Text::new(format!("{}", *c))
+                        .size(15)
+                        .width(Length::Fill)
+                        .horizontal_alignment(HorizontalAlignment::Center)
+                        .vertical_alignment(VerticalAlignment::Center)
+                })
+                .fold(Row::new()
+                          .width(Length::Fill),
+                      |row, label| row.push(label))
+                .into();
+            let counts: Element<_> = self.data.labels_and_counts
+                .iter()
+                .map(|(_, c)| {
+                    Text::new(format!("{}", *c))
+                        .size(15)
+                        .width(Length::Fill)
+                        .horizontal_alignment(HorizontalAlignment::Center)
+                        .vertical_alignment(VerticalAlignment::Center)
+                })
+                .fold(Row::new()
+                          .width(Length::Fill),
+                      |row, label| row.push(label))
+                .into();
+
+            Column::new()
+                .push(Container::new(canvas)
+                    .width(Length::Fill)
+                    .height(Length::Fill)
+                )
+                .push(labels)
+                .push(counts)
+                .into()
+        }
     }
 }
 
@@ -116,14 +128,16 @@ impl canvas::Drawable for Hist {
             .map(|(_, i)| i)
             .max_by(|x, y| x.cmp(y)).unwrap_or(&(0 as usize));
         let height_per_count = height / (max_count as f32);
+        frame.fill(&Path::rectangle(Point::new(0 as f32, 0 as f32), Size::new(width, height)),
+        Fill::Color(Color::from_rgb8(32, 32, 32)));
         self.labels_and_counts.iter().enumerate().for_each(|(i, (_, c))| {
             let r = Path::rectangle(
                 Point::new((i as f32) * bar_width, height - (*c as f32) * height_per_count),
                 Size::new(bar_width, (*c as f32) * height_per_count));
-            frame.fill(&r, Fill::Color(Color::BLACK));
+            frame.fill(&r, Fill::Color(Color::from_rgb8(96, 96, 96)));
             frame.stroke(&r, Stroke {
                 width: 0.5,
-                color: Color::from_rgba8(128, 128, 128, 1.0),
+                color: Color::from_rgb8(32, 32, 32),
                 ..Stroke::default()
             })
         });
