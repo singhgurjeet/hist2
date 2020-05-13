@@ -28,6 +28,7 @@ fn read_from_file(file_name: &String, max_num_lines: usize) -> Vec<String> {
 
 fn is_mostly_strings(vals: &Vec<String>) -> bool {
     vals.iter()
+        .filter(|x| x.len() > 0)
         .map(|x| x.parse::<f32>())
         .filter(|x| x.is_err())
         .count() > (vals.len() / 2)
@@ -45,6 +46,7 @@ fn histogram_from_categories(vals: &Vec<String>) -> Vec<(String, usize)> {
 
 fn histogram_from_numbers(vals: &Vec<String>, num_bars: &f32) -> Vec<(String, usize)> {
     let nums: Vec<f32> = vals.iter()
+        .filter(|x| x.len() > 0)
         .map(|x| x.parse::<f32>())
         .filter(|x| !x.is_err())
         .map(|x| x.unwrap())

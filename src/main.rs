@@ -76,7 +76,7 @@ impl Application for App {
             let labels: Element<_> = self.data.labels_and_counts
                 .iter()
                 .map(|(c, _)| {
-                    Text::new(format!("{}", *c))
+                    Text::new(format!("{:.5}", *c))
                         .size(15)
                         .width(Length::Fill)
                         .horizontal_alignment(HorizontalAlignment::Center)
