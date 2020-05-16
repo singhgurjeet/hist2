@@ -1,10 +1,10 @@
 #[macro_use]
 extern crate clap;
 
-use iced::{canvas, executor, Application, Canvas, Color, Command, Container, Element, Length, Point,
-           Settings, Size, Column, Text, Row, HorizontalAlignment, VerticalAlignment};
+use iced::{canvas, executor, Application, Canvas, Color, Command, Element, Length, Point, Settings, Size, Column, Text, Row, HorizontalAlignment, VerticalAlignment, Rectangle};
 use std::fmt::Error;
 use atty::Stream;
+use iced::canvas::{Cache, Cursor, Geometry};
 
 mod data;
 
@@ -23,7 +23,6 @@ pub enum InputSource {
 struct App {
     data: Hist,
     loaded: bool,
-    bars: canvas::layer::Cache<Hist>,
 }
 
 #[derive(Debug, Clone)]
@@ -49,9 +48,8 @@ impl Application for App {
             InputSource::FileName(matches.value_of("INPUT").expect("No input").to_owned())
         };
         (App {
-            data: Hist { labels_and_counts: vec!{("a".to_owned(), 10)}},
+            data: Hist { labels_and_counts: vec!{("a".to_owned(), 10)}, bars: Default::default()},
             loaded: false,
-            bars: Default::default(),
         },
          Command::perform(data::compute_histogram(
              matches.value_of("BINS").unwrap_or("50").parse::<usize>().unwrap(),
@@ -67,9 +65,8 @@ impl Application for App {
         match message {
             Message::Loaded(Ok(data)) => {
                 *self = App {
-                    data: Hist { labels_and_counts: data },
+                    data: Hist { labels_and_counts: data, bars: Default::default() },
                     loaded: true,
-                    bars: Default::default(),
                 };
                 Command::none()
             }
@@ -87,11 +84,6 @@ impl Application for App {
                 .vertical_alignment(VerticalAlignment::Center)
                 .into()
         } else {
-            let canvas = Canvas::new()
-                .width(Length::Fill)
-                .height(Length::Fill)
-                .push(self.bars.with(&self.data));
-
             let labels: Element<_> = self.data.labels_and_counts
                 .iter()
                 .map(|(c, _)| {
@@ -120,10 +112,7 @@ impl Application for App {
                 .into();
 
             Column::new()
-                .push(Container::new(canvas)
-                    .width(Length::Fill)
-                    .height(Length::Fill)
-                )
+                .push(self.data.to_canvas())
                 .push(labels)
                 .push(counts)
                 .into()
@@ -131,34 +120,47 @@ impl Application for App {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Default)]
 struct Hist {
-    labels_and_counts: Vec<(String, usize)>
+    labels_and_counts: Vec<(String, usize)>,
+    bars: Cache
 }
 
-impl canvas::Drawable for Hist {
-    fn draw(&self, frame: &mut canvas::Frame) {
+impl Hist {
+    fn to_canvas(&mut self) -> Element<'_, Message> {
+        Canvas::new(self)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .into()
+    }
+}
+
+impl canvas::Program<Message> for Hist {
+    fn draw(&self, bounds: Rectangle, _cursor: Cursor) -> Vec<Geometry> {
         use canvas::{Fill, Path, Stroke};
-        let width = frame.width();
-        let height = frame.height();
-        let num_bins = self.labels_and_counts.len() as f32;
-        let bar_width = width / num_bins;
-        let max_count = *self.labels_and_counts.iter()
-            .map(|(_, i)| i)
-            .max_by(|x, y| x.cmp(y)).unwrap_or(&(0 as usize));
-        let height_per_count = height / (max_count as f32);
-        frame.fill(&Path::rectangle(Point::new(0 as f32, 0 as f32), Size::new(width, height)),
-        Fill::Color(Color::from_rgb8(32, 32, 32)));
-        self.labels_and_counts.iter().enumerate().for_each(|(i, (_, c))| {
-            let r = Path::rectangle(
-                Point::new((i as f32) * bar_width, height - (*c as f32) * height_per_count),
-                Size::new(bar_width, (*c as f32) * height_per_count));
-            frame.fill(&r, Fill::Color(Color::from_rgb8(96, 96, 96)));
-            frame.stroke(&r, Stroke {
-                width: 0.5,
-                color: Color::from_rgb8(32, 32, 32),
-                ..Stroke::default()
-            })
+        let bars = self.bars.draw(bounds.size(), |frame| {
+            let width = frame.width();
+            let height = frame.height();
+            let num_bins = self.labels_and_counts.len() as f32;
+            let bar_width = width / num_bins;
+            let max_count = *self.labels_and_counts.iter()
+                .map(|(_, i)| i)
+                .max_by(|x, y| x.cmp(y)).unwrap_or(&(0 as usize));
+            let height_per_count = height / (max_count as f32);
+            frame.fill(&Path::rectangle(Point::new(0 as f32, 0 as f32), Size::new(width, height)),
+                       Fill::Color(Color::from_rgb8(32, 32, 32)));
+            self.labels_and_counts.iter().enumerate().for_each(|(i, (_, c))| {
+                let r = Path::rectangle(
+                    Point::new((i as f32) * bar_width, height - (*c as f32) * height_per_count),
+                    Size::new(bar_width, (*c as f32) * height_per_count));
+                frame.fill(&r, Fill::Color(Color::from_rgb8(96, 96, 96)));
+                frame.stroke(&r, Stroke {
+                    width: 0.5,
+                    color: Color::from_rgb8(32, 32, 32),
+                    ..Stroke::default()
+                })
+            });
         });
+        vec![bars]
     }
 }
