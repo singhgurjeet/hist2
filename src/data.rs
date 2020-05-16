@@ -1,9 +1,8 @@
 use std::fmt::Error;
-use std::env;
-use atty::Stream;
 use std::fs::File;
 use std::io::{self, BufRead};
 use itertools::Itertools;
+use crate::InputSource;
 
 fn compare_f32(x: &f32, y: &f32) -> std::cmp::Ordering {
     x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal)
@@ -44,7 +43,7 @@ fn histogram_from_categories(vals: &Vec<String>) -> Vec<(String, usize)> {
         .collect()
 }
 
-fn histogram_from_numbers(vals: &Vec<String>, num_bars: &f32) -> Vec<(String, usize)> {
+fn histogram_from_numbers(vals: &Vec<String>, num_bars: &usize) -> Vec<(String, usize)> {
     let nums: Vec<f32> = vals.iter()
         .filter(|x| x.len() > 0)
         .map(|x| x.parse::<f32>())
@@ -53,7 +52,7 @@ fn histogram_from_numbers(vals: &Vec<String>, num_bars: &f32) -> Vec<(String, us
         .collect::<Vec<f32>>();
     let min = *nums.iter().min_by(|x, y| compare_f32(*x,*y)).unwrap_or(&(0 as f32));
     let max = *nums.iter().max_by(|x, y| compare_f32(*x,*y)).unwrap_or(&(0 as f32));
-    let delta = (max - min) / num_bars;
+    let delta = (max - min) / (*num_bars as f32);
     nums.iter()
         .map(|x| ((x - min) / delta).round() as usize)
         .sorted()
@@ -65,27 +64,21 @@ fn histogram_from_numbers(vals: &Vec<String>, num_bars: &f32) -> Vec<(String, us
         .collect()
 }
 
-pub async fn compute_histogram() -> Result<Vec<(String, usize)>, Error> {
+pub async fn compute_histogram(num_bins: usize, input: InputSource) -> Result<Vec<(String, usize)>, Error> {
     let max_num_lines = 10_000_000;
-    let num_bars = 20 as f32;
 
-    let vals: Vec<String> = if !atty::is(Stream::Stdin) {
-        read_from_stdin(max_num_lines)
-    } else {
-        let args: Vec<String> = env::args().collect();
-        if args.len() < 2 {
-            panic!("Usage: hist2 <filename>");
-        }
-        read_from_file(&args[1], max_num_lines)
+    let vals = match input {
+        InputSource::Stdin => read_from_stdin(max_num_lines),
+        InputSource::FileName(file_name) => read_from_file(&file_name, max_num_lines)
     };
 
     let mostly_string = is_mostly_strings(&vals);
 
-    let num_uniques = vals.iter().unique().count() as f32;
+    let num_uniques = vals.iter().unique().count();
 
-    if mostly_string || num_uniques < num_bars {
+    if mostly_string || num_uniques < num_bins {
         Ok(histogram_from_categories(&vals))
     } else {
-        Ok(histogram_from_numbers(&vals, &num_bars))
+        Ok(histogram_from_numbers(&vals, &num_bins))
     }
 }

@@ -1,6 +1,10 @@
+#[macro_use]
+extern crate clap;
+
 use iced::{canvas, executor, Application, Canvas, Color, Command, Container, Element, Length, Point,
            Settings, Size, Column, Text, Row, HorizontalAlignment, VerticalAlignment};
 use std::fmt::Error;
+use atty::Stream;
 
 mod data;
 
@@ -9,6 +13,11 @@ pub fn main() {
         antialiasing: true,
         ..Settings::default()
     })
+}
+
+pub enum InputSource {
+    FileName(String),
+    Stdin
 }
 
 struct App {
@@ -28,15 +37,25 @@ impl Application for App {
     type Flags = ();
 
     fn new(_flags: ()) -> (Self, Command<Message>) {
+        let matches = clap_app!(myapp =>
+            (version: "0.1")
+            (about: "Plot the distribution of input. Data must either be piped in or given as an argument")
+            (@arg BINS: -b --bins +takes_value "The number of bins in the histogram")
+            (@arg INPUT: "Sets the input file to use")
+        ).get_matches();
+        let input = if !atty::is(Stream::Stdin) {
+            InputSource::Stdin
+        } else {
+            InputSource::FileName(matches.value_of("INPUT").expect("No input").to_owned())
+        };
         (App {
-            data: Hist {
-                labels_and_counts: vec! {
-                    ("a".to_owned(), 10)}
-            },
+            data: Hist { labels_and_counts: vec!{("a".to_owned(), 10)}},
             loaded: false,
             bars: Default::default(),
         },
-         Command::perform(data::compute_histogram(), Message::Loaded),
+         Command::perform(data::compute_histogram(
+             matches.value_of("BINS").unwrap_or("50").parse::<usize>().unwrap(),
+             input), Message::Loaded),
         )
     }
 
