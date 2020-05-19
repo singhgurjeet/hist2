@@ -1,7 +1,9 @@
 #[macro_use]
 extern crate clap;
 
-use iced::{canvas, executor, Application, Canvas, Color, Command, Element, Length, Point, Settings, Size, Column, Text, Row, HorizontalAlignment, VerticalAlignment, Rectangle};
+use iced::{canvas, executor, Application, Canvas, Color, Command, Element, Length,
+           Point, Settings, Size, Column, Text, Row, HorizontalAlignment,
+           VerticalAlignment, Rectangle};
 use std::fmt::Error;
 use atty::Stream;
 use iced::canvas::{Cache, Cursor, Geometry};
@@ -27,7 +29,7 @@ struct App {
 
 #[derive(Debug, Clone)]
 enum Message {
-    Loaded(Result<Vec<(String, usize)>, Error>)
+    Loaded(Result<(Vec<(String, usize)>, Option<f32>, Option<f32>, Option<f32>), Error>)
 }
 
 impl Application for App {
@@ -48,11 +50,12 @@ impl Application for App {
             InputSource::FileName(matches.value_of("INPUT").expect("No input").to_owned())
         };
         (App {
-            data: Hist { labels_and_counts: vec!{("a".to_owned(), 10)}, bars: Default::default()},
+            data: Hist { labels_and_counts: vec!{("a".to_owned(), 10)},
+                p_25: None, p_50: None, p_75: None, bars: Default::default()},
             loaded: false,
         },
          Command::perform(data::compute_histogram(
-             matches.value_of("BINS").unwrap_or("50").parse::<usize>().unwrap(),
+             matches.value_of("BINS").unwrap_or("20").parse::<usize>().unwrap(),
              input), Message::Loaded),
         )
     }
@@ -63,9 +66,9 @@ impl Application for App {
 
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
-            Message::Loaded(Ok(data)) => {
+            Message::Loaded(Ok((labels_and_counts, p_25, p_50, p_75))) => {
                 *self = App {
-                    data: Hist { labels_and_counts: data, bars: Default::default() },
+                    data: Hist {labels_and_counts, p_25, p_50, p_75, bars: Default::default()},
                     loaded: true,
                 };
                 Command::none()
@@ -123,6 +126,9 @@ impl Application for App {
 #[derive(Default)]
 struct Hist {
     labels_and_counts: Vec<(String, usize)>,
+    p_25: Option<f32>,
+    p_50: Option<f32>,
+    p_75: Option<f32>,
     bars: Cache
 }
 
@@ -139,6 +145,11 @@ impl canvas::Program<Message> for Hist {
     fn draw(&self, bounds: Rectangle, _cursor: Cursor) -> Vec<Geometry> {
         use canvas::{Fill, Path, Stroke};
         let bars = self.bars.draw(bounds.size(), |frame| {
+            let percentile_stroke = Stroke {
+                width: 0.5,
+                color: Color::from_rgb(0.5, 0.5, 0.5),
+                ..Stroke::default()
+            };
             let width = frame.width();
             let height = frame.height();
             let num_bins = self.labels_and_counts.len() as f32;
@@ -149,6 +160,16 @@ impl canvas::Program<Message> for Hist {
             let height_per_count = height / (max_count as f32);
             frame.fill(&Path::rectangle(Point::new(0 as f32, 0 as f32), Size::new(width, height)),
                        Fill::Color(Color::from_rgb8(32, 32, 32)));
+            println!("{:?}, {:?}, {:?}", self.p_25, self.p_50, self.p_75);
+            if let Some(p_25) = self.p_25 {
+                frame.stroke(&Path::line(Point::new(p_25*width, 0.0), Point::new(p_25*width, height)), percentile_stroke);
+            }
+            if let Some(p_50) = self.p_50 {
+                frame.stroke(&Path::line(Point::new(p_50*width, 0.0), Point::new(p_50*width, height)), percentile_stroke);
+            }
+            if let Some(p_75) = self.p_75 {
+                frame.stroke(&Path::line(Point::new(p_75 * width, 0.0), Point::new(p_75 * width, height)), percentile_stroke);
+            }
             self.labels_and_counts.iter().enumerate().for_each(|(i, (_, c))| {
                 let r = Path::rectangle(
                     Point::new((i as f32) * bar_width, height - (*c as f32) * height_per_count),

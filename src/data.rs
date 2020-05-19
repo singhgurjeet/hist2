@@ -43,7 +43,7 @@ fn histogram_from_categories(vals: &Vec<String>) -> Vec<(String, usize)> {
         .collect()
 }
 
-fn histogram_from_numbers(vals: &Vec<String>, num_bars: &usize) -> Vec<(String, usize)> {
+fn histogram_from_numbers(vals: &Vec<String>, num_bars: &usize) -> (Vec<(String, usize)>, Option<f32>, Option<f32>, Option<f32>) {
     let nums: Vec<f32> = vals.iter()
         .filter(|x| x.len() > 0)
         .map(|x| x.parse::<f32>())
@@ -53,18 +53,22 @@ fn histogram_from_numbers(vals: &Vec<String>, num_bars: &usize) -> Vec<(String, 
     let min = *nums.iter().min_by(|x, y| compare_f32(*x,*y)).unwrap_or(&(0 as f32));
     let max = *nums.iter().max_by(|x, y| compare_f32(*x,*y)).unwrap_or(&(0 as f32));
     let delta = (max - min) / (*num_bars as f32);
-    nums.iter()
-        .map(|x| ((x - min) / delta).round() as usize)
-        .sorted()
-        .group_by(|e| *e)
-        .into_iter()
-        .map(|(k, group_k)| (k, group_k.count()))
-        .sorted_by(|(i, _), (j, _)| i.cmp(j))
-        .map(|(i, val)| (format!("{}", min + (i as f32) * delta + 0.5 as f32), val))
-        .collect()
+    let sorted_nums = nums.iter().sorted_by(|x, y| compare_f32(*x,*y)).collect::<Vec<&f32>>();
+    let len_25 = ((sorted_nums.len() as f32) * 0.25) as usize;
+    (sorted_nums.iter().map(|x| ((**x - min) / delta).round() as usize)
+         .group_by(|e| *e)
+         .into_iter()
+         .map(|(k, group_k)| (k, group_k.count()))
+         .sorted_by(|(i, _), (j, _)| i.cmp(j))
+         .map(|(i, val)| (format!("{}", min + (i as f32) * delta + 0.5 as f32), val))
+         .collect(),
+     Some((sorted_nums[len_25] - min)/ (max-min)),
+     Some((sorted_nums[len_25 * 2] - min)/ (max-min)),
+     Some((sorted_nums[len_25 * 3] - min)/ (max-min))
+    )
 }
 
-pub async fn compute_histogram(num_bins: usize, input: InputSource) -> Result<Vec<(String, usize)>, Error> {
+pub async fn compute_histogram(num_bins: usize, input: InputSource) -> Result<(Vec<(String, usize)>, Option<f32>, Option<f32>, Option<f32>), Error> {
     let max_num_lines = 10_000_000;
 
     let vals = match input {
@@ -77,7 +81,7 @@ pub async fn compute_histogram(num_bins: usize, input: InputSource) -> Result<Ve
     let num_uniques = vals.iter().unique().count();
 
     if mostly_string || num_uniques < num_bins {
-        Ok(histogram_from_categories(&vals))
+        Ok((histogram_from_categories(&vals), None, None, None))
     } else {
         Ok(histogram_from_numbers(&vals, &num_bins))
     }
