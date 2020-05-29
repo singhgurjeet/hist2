@@ -1,7 +1,7 @@
 use iced::{canvas::{Stroke, Fill, LineCap, LineJoin}, Color};
 
-pub static DARK_GREY: Color = Color{r: 0.125, g: 0.125, b: 0.125, a: 0.1};
-pub static LIGHT_GREY: Color = Color{r: 0.375, g: 0.375, b: 0.375, a: 0.1};
+pub static DARK_GREY: Color = Color{r: 0.125, g: 0.125, b: 0.125, a: 1.0};
+pub static LIGHT_GREY: Color = Color{r: 0.375, g: 0.375, b: 0.375, a: 1.0};
 pub static LIGHTER_GREY: Color = Color {r:0.5, g:0.5, b:0.5, a:1.0};
 
 pub static PERCENTILE_STROKE: Stroke = Stroke {
