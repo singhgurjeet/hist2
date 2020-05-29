@@ -160,7 +160,6 @@ impl canvas::Program<Message> for Hist {
             let height_per_count = height / (max_count as f32);
             frame.fill(&Path::rectangle(Point::new(0 as f32, 0 as f32), Size::new(width, height)),
                        Fill::Color(Color::from_rgb8(32, 32, 32)));
-            println!("{:?}, {:?}, {:?}", self.p_25, self.p_50, self.p_75);
             if let Some(p_25) = self.p_25 {
                 frame.stroke(&Path::line(Point::new(p_25*width, 0.0), Point::new(p_25*width, height)), percentile_stroke);
             }
