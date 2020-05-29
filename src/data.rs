@@ -3,6 +3,7 @@ use std::fs::File;
 use std::io::{self, BufRead};
 use itertools::Itertools;
 use crate::InputSource;
+use std::collections::HashMap;
 
 fn compare_f32(x: &f32, y: &f32) -> std::cmp::Ordering {
     x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal)
@@ -44,24 +45,26 @@ fn histogram_from_categories(vals: &Vec<String>) -> Vec<(String, usize)> {
 }
 
 fn histogram_from_numbers(vals: &Vec<String>, num_bars: &usize) -> (Vec<(String, usize)>, Option<f32>, Option<f32>, Option<f32>) {
-    let nums: Vec<f32> = vals.iter()
+    let sorted_nums: Vec<f32> = vals.iter()
         .filter(|x| x.len() > 0)
         .map(|x| x.parse::<f32>())
-        .filter(|x| !x.is_err())
+        .filter(|x| x.is_ok())
         .map(|x| x.unwrap())
+        .sorted_by(|x, y| compare_f32(x,y))
         .collect::<Vec<f32>>();
-    let min = *nums.iter().min_by(|x, y| compare_f32(*x,*y)).unwrap_or(&(0 as f32));
-    let max = *nums.iter().max_by(|x, y| compare_f32(*x,*y)).unwrap_or(&(0 as f32));
+    let min = *sorted_nums.first().unwrap();
+    let max = *sorted_nums.last().unwrap();
     let delta = (max - min) / (*num_bars as f32);
-    let sorted_nums = nums.iter().sorted_by(|x, y| compare_f32(*x,*y)).collect::<Vec<&f32>>();
     let len_25 = ((sorted_nums.len() as f32) * 0.25) as usize;
-    (sorted_nums.iter().map(|x| ((**x - min) / delta).round() as usize)
-         .group_by(|e| *e)
-         .into_iter()
-         .map(|(k, group_k)| (k, group_k.count()))
-         .sorted_by(|(i, _), (j, _)| i.cmp(j))
-         .map(|(i, val)| (format!("{}", min + (i as f32) * delta + 0.5 as f32), val))
-         .collect(),
+    let existing_counts: HashMap<usize, usize> = sorted_nums.iter().map(|x| ((*x - min) / delta) as usize)
+        .group_by(|e| *e)
+        .into_iter()
+        .map(|(k, group_k)| (k, group_k.count()))
+        .collect();
+    (
+        (0..*num_bars).map(|i| (i as usize, existing_counts.get(&(i as usize)).unwrap_or(&(0 as usize))))
+        .map(|(i, val)| (format!("{}", min + (i as f32) * delta + 0.5 as f32), *val))
+        .collect::<Vec<(String, usize)>>(),
      Some((sorted_nums[len_25] - min)/ (max-min)),
      Some((sorted_nums[len_25 * 2] - min)/ (max-min)),
      Some((sorted_nums[len_25 * 3] - min)/ (max-min))

@@ -6,7 +6,7 @@ use iced::{canvas, executor, Application, Canvas, Command, Element, Length,
            VerticalAlignment, Rectangle};
 use std::fmt::Error;
 use atty::Stream;
-use iced::canvas::{Cache, Cursor, Geometry, Path};
+use iced::canvas::{Cache, Cursor, Geometry, Path, Event};
 
 mod data;
 mod styles;
@@ -143,6 +143,18 @@ impl Hist {
 }
 
 impl canvas::Program<Message> for Hist {
+    fn update(
+        &mut self,
+        _event: Event,
+        bounds: Rectangle,
+        cursor: Cursor,
+    ) -> Option<Message> {
+        if let Some(_cursor_position) = cursor.position_in(&bounds) {
+            // println!("{:?}", ((self.labels_and_counts.len() as f32) * cursor_position.x/bounds.width) as usize);
+        }
+        None
+    }
+
     fn draw(&self, bounds: Rectangle, _cursor: Cursor) -> Vec<Geometry> {
         let bars = self.bars.draw(bounds.size(), |frame| {
             let width = frame.width();
