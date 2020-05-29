@@ -1,14 +1,15 @@
 #[macro_use]
 extern crate clap;
 
-use iced::{canvas, executor, Application, Canvas, Color, Command, Element, Length,
+use iced::{canvas, executor, Application, Canvas, Command, Element, Length,
            Point, Settings, Size, Column, Text, Row, HorizontalAlignment,
            VerticalAlignment, Rectangle};
 use std::fmt::Error;
 use atty::Stream;
-use iced::canvas::{Cache, Cursor, Geometry};
+use iced::canvas::{Cache, Cursor, Geometry, Path};
 
 mod data;
+mod styles;
 
 pub fn main() {
     App::run(Settings {
@@ -143,13 +144,7 @@ impl Hist {
 
 impl canvas::Program<Message> for Hist {
     fn draw(&self, bounds: Rectangle, _cursor: Cursor) -> Vec<Geometry> {
-        use canvas::{Fill, Path, Stroke};
         let bars = self.bars.draw(bounds.size(), |frame| {
-            let percentile_stroke = Stroke {
-                width: 0.5,
-                color: Color::from_rgb(0.5, 0.5, 0.5),
-                ..Stroke::default()
-            };
             let width = frame.width();
             let height = frame.height();
             let num_bins = self.labels_and_counts.len() as f32;
@@ -159,26 +154,22 @@ impl canvas::Program<Message> for Hist {
                 .max_by(|x, y| x.cmp(y)).unwrap_or(&(0 as usize));
             let height_per_count = height / (max_count as f32);
             frame.fill(&Path::rectangle(Point::new(0 as f32, 0 as f32), Size::new(width, height)),
-                       Fill::Color(Color::from_rgb8(32, 32, 32)));
+                       styles::FRAME_BG_FILL);
             if let Some(p_25) = self.p_25 {
-                frame.stroke(&Path::line(Point::new(p_25*width, 0.0), Point::new(p_25*width, height)), percentile_stroke);
+                frame.stroke(&Path::line(Point::new(p_25*width, 0.0), Point::new(p_25*width, height)), styles::PERCENTILE_STROKE);
             }
             if let Some(p_50) = self.p_50 {
-                frame.stroke(&Path::line(Point::new(p_50*width, 0.0), Point::new(p_50*width, height)), percentile_stroke);
+                frame.stroke(&Path::line(Point::new(p_50*width, 0.0), Point::new(p_50*width, height)), styles::PERCENTILE_STROKE);
             }
             if let Some(p_75) = self.p_75 {
-                frame.stroke(&Path::line(Point::new(p_75 * width, 0.0), Point::new(p_75 * width, height)), percentile_stroke);
+                frame.stroke(&Path::line(Point::new(p_75 * width, 0.0), Point::new(p_75 * width, height)), styles::PERCENTILE_STROKE);
             }
             self.labels_and_counts.iter().enumerate().for_each(|(i, (_, c))| {
                 let r = Path::rectangle(
                     Point::new((i as f32) * bar_width, height - (*c as f32) * height_per_count),
                     Size::new(bar_width, (*c as f32) * height_per_count));
-                frame.fill(&r, Fill::Color(Color::from_rgb8(96, 96, 96)));
-                frame.stroke(&r, Stroke {
-                    width: 0.5,
-                    color: Color::from_rgb8(32, 32, 32),
-                    ..Stroke::default()
-                })
+                frame.fill(&r, styles::BAR_FILL);
+                frame.stroke(&r, styles::BAR_STROKE)
             });
         });
         vec![bars]
