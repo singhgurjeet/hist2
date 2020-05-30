@@ -2,8 +2,8 @@
 extern crate clap;
 
 use iced::{canvas, executor, mouse, Application, Canvas, Command, Element, Length,
-           Point, Settings, Size, Column, Text, Row, HorizontalAlignment,
-           VerticalAlignment, Rectangle};
+           Point, Settings, Size, Column, Row, HorizontalAlignment,
+           VerticalAlignment, Rectangle, Vector};
 use std::fmt::Error;
 use atty::Stream;
 use iced::canvas::{Cache, Cursor, Geometry, Path, Event};
@@ -80,7 +80,7 @@ impl Application for App {
 
     fn view(&mut self) -> Element<Message> {
         if !self.loaded {
-            Text::new("Loading...")
+            iced::Text::new("Loading...")
                 .size(55)
                 .width(Length::Fill)
                 .height(Length::Fill)
@@ -88,37 +88,8 @@ impl Application for App {
                 .vertical_alignment(VerticalAlignment::Center)
                 .into()
         } else {
-            let labels: Element<_> = self.data.labels_and_counts
-                .iter()
-                .map(|(c, _)| {
-                    Text::new(format!("{:.5}", *c))
-                        .size(15)
-                        .width(Length::Fill)
-                        .horizontal_alignment(HorizontalAlignment::Center)
-                        .vertical_alignment(VerticalAlignment::Center)
-                })
-                .fold(Row::new()
-                          .width(Length::Fill),
-                      |row, label| row.push(label))
-                .into();
-            let counts: Element<_> = self.data.labels_and_counts
-                .iter()
-                .map(|(_, c)| {
-                    Text::new(format!("{}", *c))
-                        .size(15)
-                        .width(Length::Fill)
-                        .horizontal_alignment(HorizontalAlignment::Center)
-                        .vertical_alignment(VerticalAlignment::Center)
-                })
-                .fold(Row::new()
-                          .width(Length::Fill),
-                      |row, label| row.push(label))
-                .into();
-
             Column::new()
                 .push(self.data.view())
-                .push(labels)
-                .push(counts)
                 .into()
         }
     }
@@ -187,6 +158,24 @@ impl canvas::Program<Message> for Hist {
                     Size::new(bar_width, (*c as f32) * height_per_count));
                 if self.highlight == Some(i) {
                     frame.fill(&r, styles::H_BAR_FILL);
+                    let text = iced::canvas::Text {
+                        color: styles::LABEL_COLOR,
+                        size: 20.0,
+                        position: Point::new(frame.width(), frame.height()),
+                        horizontal_alignment: HorizontalAlignment::Right,
+                        vertical_alignment: VerticalAlignment::Bottom,
+                        ..iced::canvas::Text::default()
+                    };
+                    frame.fill_text(iced::canvas::Text {
+                        content: format!("{}", self.labels_and_counts[i].1),
+                        position: text.position - Vector::new(0.0, 16.0),
+                        ..text
+                    });
+                    frame.fill_text(iced::canvas::Text {
+                        content: format!("{}", self.labels_and_counts[i].0),
+                        position: text.position - Vector::new(0.0, 32.0),
+                        ..text
+                    });
                 } else {
                     frame.fill(&r, styles::BAR_FILL);
                 }

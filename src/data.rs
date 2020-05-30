@@ -88,4 +88,5 @@ pub async fn compute_histogram(num_bins: usize, input: InputSource) -> Result<(V
     } else {
         Ok(histogram_from_numbers(&vals, &num_bins))
     }
+    // std::thread::spawn(move || drop(vals));
 }
