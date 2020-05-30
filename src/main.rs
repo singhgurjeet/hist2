@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate clap;
 
-use iced::{canvas, executor, Application, Canvas, Command, Element, Length,
+use iced::{canvas, executor, mouse, Application, Canvas, Command, Element, Length,
            Point, Settings, Size, Column, Text, Row, HorizontalAlignment,
            VerticalAlignment, Rectangle};
 use std::fmt::Error;
@@ -30,7 +30,7 @@ struct App {
 
 #[derive(Debug, Clone)]
 enum Message {
-    Loaded(Result<(Vec<(String, usize)>, Option<f32>, Option<f32>, Option<f32>), Error>)
+    Loaded(Result<(Vec<(String, usize)>, Option<f32>, Option<f32>, Option<f32>), Error>),
 }
 
 impl Application for App {
@@ -52,7 +52,7 @@ impl Application for App {
         };
         (App {
             data: Hist { labels_and_counts: vec!{("a".to_owned(), 10)},
-                p_25: None, p_50: None, p_75: None, bars: Default::default()},
+                p_25: None, p_50: None, p_75: None, bars: Default::default(), highlight: None},
             loaded: false,
         },
          Command::perform(data::compute_histogram(
@@ -69,11 +69,11 @@ impl Application for App {
         match message {
             Message::Loaded(Ok((labels_and_counts, p_25, p_50, p_75))) => {
                 *self = App {
-                    data: Hist {labels_and_counts, p_25, p_50, p_75, bars: Default::default()},
+                    data: Hist {labels_and_counts, p_25, p_50, p_75, bars: Default::default(), highlight: None},
                     loaded: true,
                 };
                 Command::none()
-            }
+            },
             _ => { Command::none() }
         }
     }
@@ -116,7 +116,7 @@ impl Application for App {
                 .into();
 
             Column::new()
-                .push(self.data.to_canvas())
+                .push(self.data.view())
                 .push(labels)
                 .push(counts)
                 .into()
@@ -130,11 +130,12 @@ struct Hist {
     p_25: Option<f32>,
     p_50: Option<f32>,
     p_75: Option<f32>,
+    highlight: Option<usize>,
     bars: Cache
 }
 
 impl Hist {
-    fn to_canvas(&mut self) -> Element<'_, Message> {
+    fn view(&mut self) -> Element<'_, Message> {
         Canvas::new(self)
             .width(Length::Fill)
             .height(Length::Fill)
@@ -149,8 +150,12 @@ impl canvas::Program<Message> for Hist {
         bounds: Rectangle,
         cursor: Cursor,
     ) -> Option<Message> {
-        if let Some(_cursor_position) = cursor.position_in(&bounds) {
-            // println!("{:?}", ((self.labels_and_counts.len() as f32) * cursor_position.x/bounds.width) as usize);
+        if let Some(cursor_position) = cursor.position_in(&bounds) {
+            self.highlight = Some(((self.labels_and_counts.len() as f32) * cursor_position.x/bounds.width) as usize);
+            self.bars.clear();
+        } else {
+            self.highlight = None;
+            self.bars.clear();
         }
         None
     }
@@ -180,10 +185,18 @@ impl canvas::Program<Message> for Hist {
                 let r = Path::rectangle(
                     Point::new((i as f32) * bar_width, height - (*c as f32) * height_per_count),
                     Size::new(bar_width, (*c as f32) * height_per_count));
-                frame.fill(&r, styles::BAR_FILL);
+                if self.highlight == Some(i) {
+                    frame.fill(&r, styles::H_BAR_FILL);
+                } else {
+                    frame.fill(&r, styles::BAR_FILL);
+                }
                 frame.stroke(&r, styles::BAR_STROKE)
             });
         });
         vec![bars]
+    }
+
+    fn mouse_interaction( &self, _bounds: Rectangle, _cursor: Cursor) -> mouse::Interaction {
+        mouse::Interaction::Crosshair
     }
 }
