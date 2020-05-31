@@ -2,7 +2,7 @@
 extern crate clap;
 
 use iced::{canvas, executor, mouse, Application, Canvas, Command, Element, Length,
-           Point, Settings, Size, Column, Row, HorizontalAlignment,
+           Point, Settings, Size, HorizontalAlignment,
            VerticalAlignment, Rectangle, Vector};
 use std::fmt::Error;
 use atty::Stream;
@@ -88,9 +88,7 @@ impl Application for App {
                 .vertical_alignment(VerticalAlignment::Center)
                 .into()
         } else {
-            Column::new()
-                .push(self.data.view())
-                .into()
+            self.data.view()
         }
     }
 }
@@ -167,12 +165,12 @@ impl canvas::Program<Message> for Hist {
                         ..iced::canvas::Text::default()
                     };
                     frame.fill_text(iced::canvas::Text {
-                        content: format!("{}", self.labels_and_counts[i].1),
+                        content: format!("{}", self.labels_and_counts[i].0),
                         position: text.position - Vector::new(0.0, 16.0),
                         ..text
                     });
                     frame.fill_text(iced::canvas::Text {
-                        content: format!("{}", self.labels_and_counts[i].0),
+                        content: format!("{}", self.labels_and_counts[i].1),
                         position: text.position - Vector::new(0.0, 32.0),
                         ..text
                     });
