@@ -30,7 +30,7 @@ struct App {
 
 #[derive(Debug, Clone)]
 enum Message {
-    Loaded(Result<(Vec<(String, usize)>, Option<f32>, Option<f32>, Option<f32>), Error>),
+    Loaded(Result<(Vec<(String, usize)>, Option<f32>, Option<f32>, Option<f32>, f32), Error>),
 }
 
 impl Application for App {
@@ -52,7 +52,7 @@ impl Application for App {
         };
         (App {
             data: Hist { labels_and_counts: vec!{("a".to_owned(), 10)},
-                p_25: None, p_50: None, p_75: None, bars: Default::default(), highlight: None},
+                p_25: None, p_50: None, p_75: None, total: 0.0, bars: Default::default(), highlight: None},
             loaded: false,
         },
          Command::perform(data::compute_histogram(
@@ -67,9 +67,9 @@ impl Application for App {
 
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
-            Message::Loaded(Ok((labels_and_counts, p_25, p_50, p_75))) => {
+            Message::Loaded(Ok((labels_and_counts, p_25, p_50, p_75, total))) => {
                 *self = App {
-                    data: Hist {labels_and_counts, p_25, p_50, p_75, bars: Default::default(), highlight: None},
+                    data: Hist {labels_and_counts, p_25, p_50, p_75, bars: Default::default(), total: total, highlight: None},
                     loaded: true,
                 };
                 Command::none()
@@ -99,6 +99,7 @@ struct Hist {
     p_25: Option<f32>,
     p_50: Option<f32>,
     p_75: Option<f32>,
+    total: f32,
     highlight: Option<usize>,
     bars: Cache
 }
@@ -166,6 +167,10 @@ impl canvas::Program<Message> for Hist {
                     };
                     frame.fill_text(iced::canvas::Text {
                         content: format!("{}", self.labels_and_counts[i].0),
+                        ..text
+                    });
+                    frame.fill_text(iced::canvas::Text {
+                        content: format!("{}%", 100.0*(self.labels_and_counts[i].1 as f32)/self.total),
                         position: text.position - Vector::new(0.0, 16.0),
                         ..text
                     });
