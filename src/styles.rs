@@ -1,4 +1,4 @@
-use iced::{canvas::{Stroke, Fill, LineCap, LineJoin}, Color};
+use iced::{canvas::{Stroke, Fill, FillRule, LineCap, LineJoin}, Color};
 
 pub static DARK_GREY: Color = Color{r: 0.125, g: 0.125, b: 0.125, a: 1.0};
 pub static LIGHT_GREY: Color = Color {r:0.5, g:0.5, b:0.5, a:1.0};
@@ -13,8 +13,8 @@ pub static PERCENTILE_STROKE: Stroke = Stroke {
     line_join: LineJoin::Miter
 };
 
-pub static BAR_FILL: Fill = Fill::Color(BAR_COLOR);
-pub static H_BAR_FILL: Fill = Fill::Color(HIGHLIGHT_BAR_COLOR);
+pub static BAR_FILL: Fill = Fill{color: BAR_COLOR, rule: FillRule::NonZero};
+pub static H_BAR_FILL: Fill = Fill{color: HIGHLIGHT_BAR_COLOR, rule: FillRule::NonZero};
 
 pub static BAR_STROKE: Stroke = Stroke {
     width: 0.5,
@@ -22,4 +22,4 @@ pub static BAR_STROKE: Stroke = Stroke {
     line_cap: LineCap::Butt,
     line_join: LineJoin::Miter
 };
-pub static FRAME_BG_FILL: Fill = Fill::Color(DARK_GREY);
+pub static FRAME_BG_FILL: Fill = Fill{color:DARK_GREY, rule: FillRule::NonZero};
