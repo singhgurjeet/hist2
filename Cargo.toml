@@ -8,4 +8,4 @@ edition = "2018"
 iced = { git="https://github.com/hecrj/iced", features = ["canvas", "async-std", "debug"]}
 atty = "0.2"
 itertools = "0.9.0"
-clap = "2.33.1"
+clap = "2.33.3"

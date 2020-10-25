@@ -6,7 +6,7 @@ use iced::{canvas, executor, mouse, Application, Canvas, Command, Element, Lengt
            VerticalAlignment, Rectangle, Vector};
 use std::fmt::Error;
 use atty::Stream;
-use iced::canvas::{Cache, Cursor, Geometry, Path, Event};
+use iced::canvas::{Cache, Cursor, Geometry, Path, Event, Fill};
 
 mod data;
 mod styles;
@@ -141,7 +141,7 @@ impl canvas::Program<Message> for Hist {
                 .max_by(|x, y| x.cmp(y)).unwrap_or(&(0 as usize));
             let height_per_count = height / (max_count as f32);
             frame.fill(&Path::rectangle(Point::new(0 as f32, 0 as f32), Size::new(width, height)),
-                       styles::FRAME_BG_FILL);
+                       Fill::from(styles::DARK_GREY));
             if let Some(p_25) = self.p_25 {
                 frame.stroke(&Path::line(Point::new(p_25*width, 0.0), Point::new(p_25*width, height)), styles::PERCENTILE_STROKE);
             }
@@ -156,7 +156,7 @@ impl canvas::Program<Message> for Hist {
                     Point::new((i as f32) * bar_width, height - (*c as f32) * height_per_count),
                     Size::new(bar_width, (*c as f32) * height_per_count));
                 if self.highlight == Some(i) {
-                    frame.fill(&r, styles::H_BAR_FILL);
+                    frame.fill(&r, Fill::from(styles::HIGHLIGHT_BAR_COLOR));
                     let text = iced::canvas::Text {
                         color: styles::LABEL_COLOR,
                         size: 20.0,
@@ -180,7 +180,7 @@ impl canvas::Program<Message> for Hist {
                         ..text
                     });
                 } else {
-                    frame.fill(&r, styles::BAR_FILL);
+                    frame.fill(&r, Fill::from(styles::BAR_COLOR));
                 }
                 frame.stroke(&r, styles::BAR_STROKE)
             });
