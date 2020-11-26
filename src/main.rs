@@ -6,7 +6,7 @@ use iced::{canvas, executor, mouse, Application, Canvas, Command, Element, Lengt
            VerticalAlignment, Rectangle, Vector};
 use std::fmt::Error;
 use atty::Stream;
-use iced::canvas::{Cache, Cursor, Geometry, Path, Event, Fill};
+use iced::canvas::{Cache, Cursor, Geometry, Path, Event, Fill, event};
 
 mod data;
 mod styles;
@@ -119,7 +119,7 @@ impl canvas::Program<Message> for Hist {
         _event: Event,
         bounds: Rectangle,
         cursor: Cursor,
-    ) -> Option<Message> {
+    ) -> (event::Status, Option<Message>) {
         if let Some(cursor_position) = cursor.position_in(&bounds) {
             self.highlight = Some(((self.labels_and_counts.len() as f32) * cursor_position.x/bounds.width) as usize);
             self.bars.clear();
@@ -127,7 +127,7 @@ impl canvas::Program<Message> for Hist {
             self.highlight = None;
             self.bars.clear();
         }
-        None
+        (event::Status::Ignored, None)
     }
 
     fn draw(&self, bounds: Rectangle, _cursor: Cursor) -> Vec<Geometry> {
