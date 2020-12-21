@@ -170,7 +170,7 @@ impl canvas::Program<Message> for Hist {
                         ..text
                     });
                     frame.fill_text(iced::canvas::Text {
-                        content: format!("{}%", 100.0*(self.labels_and_counts[i].1 as f32)/self.total),
+                        content: format!("{:.2}%", 100.0*(self.labels_and_counts[i].1 as f32)/self.total),
                         position: text.position - Vector::new(0.0, 16.0),
                         ..text
                     });
