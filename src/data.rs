@@ -2,8 +2,12 @@ use std::fmt::Error;
 use std::fs::File;
 use std::io::{self, BufRead};
 use itertools::Itertools;
-use crate::InputSource;
 use std::collections::HashMap;
+
+pub enum InputSource {
+    FileName(String),
+    Stdin
+}
 
 fn compare_f32(x: &f32, y: &f32) -> std::cmp::Ordering {
     x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal)
