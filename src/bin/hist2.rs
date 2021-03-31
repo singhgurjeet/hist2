@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate clap;
 
-use iced::{canvas, executor, mouse, Application, Canvas, Command, Element, Length,
+use iced::{canvas, executor, mouse, Application, Canvas, Command, Clipboard, Element, Length,
            Point, Settings, Size, HorizontalAlignment,
            VerticalAlignment, Rectangle, Vector};
 use std::fmt::Error;
@@ -61,7 +61,7 @@ impl Application for App {
         String::from("Histogram")
     }
 
-    fn update(&mut self, message: Message) -> Command<Message> {
+    fn update(&mut self, message: Message, _: &mut Clipboard) -> Command<Message> {
         match message {
             Message::Loaded(Ok((labels_and_counts, p_25, p_50, p_75, total))) => {
                 *self = App {
